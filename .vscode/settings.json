@@ -1,0 +1,11 @@
+{
+  "python.jediEnabled": false,
+  "python.autoComplete.extraPaths": [
+    "/Users/sascha/.vscode/extensions/joedevivo.vscode-circuitpython-0.1.0/boards/0x239A/0x8054",
+    "/Users/sascha/.vscode/extensions/joedevivo.vscode-circuitpython-0.1.0/stubs",
+    "/Users/sascha/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20200407/adafruit-circuitpython-bundle-py-20200407/lib"
+  ],
+  "python.pythonPath": "/Users/sascha/.local/share/virtualenvs/PyPortal-x-DzJ9OM/bin/python",
+  "circuitpython.board.vid": "0x239A",
+  "circuitpython.board.pid": "0x8054"
+}
