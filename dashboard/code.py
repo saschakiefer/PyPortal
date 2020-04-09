@@ -86,7 +86,11 @@ class Fritbox_Status:
         headers = self.fritz_headers.copy()
         headers["soapaction"] = soapaction
 
-        response = requests.post(url, data=body, headers=headers, timeout=2)
+        try:
+            response = requests.post(url, data=body, headers=headers, timeout=2)
+        except RuntimeError as error:
+            logger.warning(str(error))
+            return "Unknown"  # We just ignore this and wait for the next request
 
         if url_suffix == "WANIPConn1":
             regex = r"<NewConnectionStatus>(.*)<\/NewConnectionStatus>"
