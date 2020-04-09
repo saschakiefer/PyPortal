@@ -11,3 +11,4 @@ adafruit_bitmap_font==1.1.1
 adafruit_io==3.1.2
 adafruit_display_text==2.5.0
 adafruit_register==1.8.0
+adafruit_hid==4.1.0

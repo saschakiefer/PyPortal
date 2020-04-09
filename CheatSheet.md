@@ -1,5 +1,7 @@
 # PyPortal CheatSheet
 
+[Adafruit CircuitPython API Reference — Adafruit CircuitPython 0.0.0 documentation](https://circuitpython.readthedocs.io/en/latest/docs/index.html)
+
 ## Minmial Modules
 
 Use the `requirements_min.txt` file as a basis for new Projects. These are the ones, that usually are needed. Copy the file to your project directory and rename it to `requirements.txt`. You can use `circup` to install/remove packages. `circup freeze -r`creates/overrites the `requirements.txt`with the currently installed libraries on the device.
@@ -80,3 +82,30 @@ import adafruit_logging as logging
 logger = logging.getLogger("logger")
 logger.setLevel(logging.INFO)  # change as desired
 ```
+
+## Create User Interfaces
+[Overview | Making a PyPortal User Interface with DisplayIO | Adafruit Learning System](https://learn.adafruit.com/making-a-pyportal-user-interface-displayio/overview)
+
+## Simulate a Keyboard
+
+```python
+from adafruit_hid.keyboard import Keyboard
+from adafruit_hid.keycode import Keycode
+import usb_hid
+
+keyboard_active = False
+
+#Initiallize the Keyboard
+try:
+    # Initialize with the available USB devices. The constructur pics the
+    # correct one from the list
+    kbd = Keyboard(usb_hid.devices)
+    keyboard_active = True
+except OSError:
+    keyboard_active = False
+
+if keyboard_active:
+    kbd.send(Keycode.COMMAND, Keycode.CONTROL, Keycode.OPTION, Keycode.SHIFT, Keycode.ONE)
+```
+
+Documentation: [Introduction — Adafruit HID Library 1.0 documentation](https://circuitpython.readthedocs.io/projects/hid/en/latest/)

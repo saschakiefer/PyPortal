@@ -1,17 +1,23 @@
-import time
 import re
+import time
 
 import adafruit_esp32spi.adafruit_esp32spi_socket as socket
 import adafruit_logging as logging
 import adafruit_requests as requests
+import adafruit_touchscreen
 import board
 import busio
+import usb_hid
 from adafruit_esp32spi import adafruit_esp32spi
+from adafruit_hid.keyboard import Keyboard
+from adafruit_hid.keycode import Keycode
+from adafruit_pyportal import PyPortal
 from digitalio import DigitalInOut
 
 esp32_cs = DigitalInOut(board.ESP_CS)
 esp32_ready = DigitalInOut(board.ESP_BUSY)
 esp32_reset = DigitalInOut(board.ESP_RESET)
+esp32_gpio0 = DigitalInOut(board.ESP_GPIO0)
 
 # Set up logging
 logger = logging.getLogger("dashboard")
@@ -21,7 +27,31 @@ logger.info("My Multi Dasboard")
 
 # Initialize wlan Microncontroller
 spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
-esp = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset)
+esp = adafruit_esp32spi.ESP_SPIcontrol(
+    spi, esp32_cs, esp32_ready, esp32_reset, esp32_gpio0
+)
+
+# Screen Setup
+pyportal = PyPortal(esp=esp, external_spi=spi, debug=True)
+display = board.DISPLAY
+display.rotation = 0
+display.auto_brightness = True
+
+# Initialize Touchscreen
+touch_screen = adafruit_touchscreen.Touchscreen(
+    board.TOUCH_XL, board.TOUCH_XR, board.TOUCH_YD, board.TOUCH_YU, size=(320, 480)
+)
+
+# Initiallize the Keyboard
+try:
+    # Initialize with the available USB devices. The constructur pics the
+    # correct one from the list
+    keyboard = Keyboard(usb_hid.devices)
+    keyboard_active = True
+    logger.info("Keyboard activated")
+except OSError:
+    keyboard_active = False
+    logger.warning("No keyboard found")
 
 # Get wifi details and more from a secrets.py file
 try:
@@ -44,8 +74,16 @@ logger.info("Connected to: " + str(esp.ssid, "utf-8"))
 # Init the requests object
 requests.set_socket(socket, esp)
 
+# Sound effects
+soundBeep = "/sounds/beep.wav"
+
 
 class Fritbox_Status:
+    """Encapsulate the FritBox status calls via the upnp protocol
+    TODO: make the class independent of gloabl variables (secret, logger) and
+    extract it to an own module
+    """
+
     def __init__(self):
         self.fritz_url_base = f"http://{secrets['access_point_ip']}:{secrets['access_point_port']}/igdupnp/control/"
         self.ritz_sap_action_base = "urn:schemas-upnp-org:service:"
@@ -58,6 +96,12 @@ class Fritbox_Status:
             "charset": "utf-8",
             "content-type": "text/xml",
             "soapaction": None,
+        }
+
+    def get_wlan_status(self):
+        return {
+            "connected": self.is_connected(),
+            "linked": self.is_linked(),
         }
 
     def is_connected(self):
@@ -107,11 +151,64 @@ class Fritbox_Status:
 
 fritz_status = Fritbox_Status()
 
+# We collect 3 points to simulate a "long press" of the button
+point_list = []
+
+# initialize the wlan check
+current_period = 0  # ensure, that it immidiately starts
+last_wlan_check = time.monotonic()
+
+logger.info("Waiting for input")
 while True:
-    logger.info(
-        "Is linked: "
-        + str(fritz_status.is_linked())
-        + " -=- Is Connected: "
-        + str(fritz_status.is_connected())
-    )
-    time.sleep(30)
+    if last_wlan_check + current_period < time.monotonic():
+        """ Only check the WLAN every 30 seconds. Therefore there is an
+        own counter parallel to the endless loop that watches for keyboard
+        input. The check time is decreased to two seconds as soon as
+        wlan is gone and increased back to 30 seconds when it's back
+        """
+        wlan_status = fritz_status.get_wlan_status()
+
+        logger.info(
+            "Is linked: "
+            + str(wlan_status["linked"])
+            + " -=- Is Connected: "
+            + str(wlan_status["connected"])
+        )
+
+        if wlan_status:
+            current_period = 30
+        else:
+            current_period = 2
+
+        last_wlan_check = time.monotonic()
+    if keyboard_active:
+        point = touch_screen.touch_point
+
+        if point:
+            # append each touch connection to a list
+            # I had an issue with the first touch detected not being accurate
+            point_list.append(point)
+
+            # after three trouch detections have occured.
+            if len(point_list) == 3:
+                # discard the first touch detection and average the other
+                # two get the x,y of the touch
+                x = (point_list[1][0] + point_list[2][0]) / 2
+                y = (point_list[1][1] + point_list[2][1]) / 2
+                logger.info("(" + str(x) + "/" + str(y) + ") pressed")
+
+                pyportal.play_file(soundBeep)
+
+                keyboard.send(
+                    Keycode.COMMAND,
+                    Keycode.CONTROL,
+                    Keycode.OPTION,
+                    Keycode.SHIFT,
+                    Keycode.ONE,
+                )
+
+                # clear list for next detection
+                point_list = []
+
+                # sleep to avoid pressing two buttons on accident
+                time.sleep(0.5)
