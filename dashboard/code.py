@@ -42,7 +42,12 @@ pyportal.set_background("/images/fractal_loading.bmp")
 
 # Initialize Touchscreen
 touch_screen = adafruit_touchscreen.Touchscreen(
-    board.TOUCH_XL, board.TOUCH_XR, board.TOUCH_YD, board.TOUCH_YU, size=(320, 480)
+    board.TOUCH_XL,
+    board.TOUCH_XR,
+    board.TOUCH_YD,
+    board.TOUCH_YU,
+    calibration=((6272, 60207), (7692, 56691)),
+    size=(480, 320),
 )
 
 # Initiallize the Keyboard
@@ -204,13 +209,13 @@ while True:
 
                 pyportal.play_file(soundBeep)
 
-                # keyboard.send(
-                #     Keycode.COMMAND,
-                #     Keycode.CONTROL,
-                #     Keycode.OPTION,
-                #     Keycode.SHIFT,
-                #     Keycode.ONE,
-                # )
+                keyboard.send(
+                    Keycode.COMMAND,
+                    Keycode.CONTROL,
+                    Keycode.OPTION,
+                    Keycode.SHIFT,
+                    Keycode.ONE,
+                )
 
                 # clear list for next detection
                 point_list = []
