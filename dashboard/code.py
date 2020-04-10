@@ -7,18 +7,23 @@ import adafruit_requests as requests
 import adafruit_touchscreen
 import board
 import busio
+import displayio
 import usb_hid
 from adafruit_esp32spi import adafruit_esp32spi
 from adafruit_hid.keyboard import Keyboard
 from adafruit_hid.keycode import Keycode
 from adafruit_pyportal import PyPortal
 from digitalio import DigitalInOut
-
+from adafruit_button import Button
+from adafruit_bitmap_font import bitmap_font
 
 esp32_cs = DigitalInOut(board.ESP_CS)
 esp32_ready = DigitalInOut(board.ESP_BUSY)
 esp32_reset = DigitalInOut(board.ESP_RESET)
 esp32_gpio0 = DigitalInOut(board.ESP_GPIO0)
+
+screen_width = 480
+screen_height = 320
 
 # Set up logging
 logger = logging.getLogger("dashboard")
@@ -26,7 +31,7 @@ logger.setLevel(logging.INFO)  # change as desired
 
 logger.info("My Multi Dasboard")
 
-# Initialize wlan Microncontroller
+# Initialize WIFI Microncontroller
 spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
 esp = adafruit_esp32spi.ESP_SPIcontrol(
     spi, esp32_cs, esp32_ready, esp32_reset, esp32_gpio0
@@ -47,7 +52,7 @@ touch_screen = adafruit_touchscreen.Touchscreen(
     board.TOUCH_YD,
     board.TOUCH_YU,
     calibration=((6272, 60207), (7692, 56691)),
-    size=(480, 320),
+    size=(screen_width, screen_height),
 )
 
 # Initiallize the Keyboard
@@ -85,6 +90,66 @@ requests.set_socket(socket, esp)
 # Sound effects
 soundBeep = "/sounds/beep.wav"
 
+# Display Groups + Background Image
+main_group = displayio.Group(max_size=15)
+
+image_file = open("/images/fractal.bmp", "rb")
+image = displayio.OnDiskBitmap(image_file)
+try:
+    image_sprite = displayio.TileGrid(image, pixel_shader=displayio.ColorConverter())
+except TypeError:
+    image_sprite = displayio.TileGrid(
+        image, pixel_shader=displayio.ColorConverter(), position=(0, 0)
+    )
+main_group.append(image_sprite)
+
+# Set the font and preload letters
+font = bitmap_font.load_font("/fonts/Helvetica-Bold-16.bdf")
+font.load_glyphs(b"abcdefghjiklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890- ()")
+
+# Buttons
+BUTTON_HEIGHT = int(screen_height / 4.5)
+BUTTON_WIDTH = int(screen_width / 2)
+BUTTON_Y = int(screen_height - BUTTON_HEIGHT)
+
+buttons = []
+
+button_action_1 = Button(
+    x=0,
+    y=BUTTON_Y,
+    width=BUTTON_WIDTH,
+    height=BUTTON_HEIGHT,
+    label="Developer Scene",
+    label_font=font,
+    label_color=0xFF7E00,
+    fill_color=0x5C5B5C,
+    outline_color=0x767676,
+    selected_fill=0x1A1A1A,
+    selected_outline=0x2E2E2E,
+    selected_label=0x525252,
+)
+
+buttons.append(button_action_1)
+
+button_action_2 = Button(
+    x=0 + BUTTON_WIDTH,
+    y=BUTTON_Y,
+    width=BUTTON_WIDTH,
+    height=BUTTON_HEIGHT,
+    label="Office Scene",
+    label_font=font,
+    label_color=0xFF7E00,
+    fill_color=0x5C5B5C,
+    outline_color=0x767676,
+    selected_fill=0x1A1A1A,
+    selected_outline=0x2E2E2E,
+    selected_label=0x525252,
+)
+
+buttons.append(button_action_2)
+
+[main_group.append(button.group) for button in buttons]
+
 
 class Fritbox_Status:
     """Encapsulate the FritBox status calls via the upnp protocol
@@ -106,7 +171,7 @@ class Fritbox_Status:
             "soapaction": None,
         }
 
-    def get_wlan_status(self):
+    def get_dsl_status(self):
         return {
             "connected": self.is_connected(),
             "linked": self.is_linked(),
@@ -162,35 +227,35 @@ fritz_status = Fritbox_Status()
 # We collect 3 points to simulate a "long press" of the button
 point_list = []
 
-# initialize the wlan check
+# initialize the dsl check
 current_period = 0  # ensure, that it immidiately starts
-last_wlan_check = time.monotonic()
+last_dsl_check = time.monotonic()
 
-pyportal.set_background("/images/fractal.bmp")
+board.DISPLAY.show(main_group)
 
 logger.info("Waiting for input")
 while True:
-    if last_wlan_check + current_period < time.monotonic():
-        """ Only check the WLAN every 30 seconds. Therefore there is an
+    if last_dsl_check + current_period < time.monotonic():
+        """ Only check the dsl every 30 seconds. Therefore there is an
         own counter parallel to the endless loop that watches for keyboard
         input. The check time is decreased to two seconds as soon as
-        wlan is gone and increased back to 30 seconds when it's back
+        dsl is gone and increased back to 30 seconds when it's back
         """
-        wlan_status = fritz_status.get_wlan_status()
+        dsl_status = fritz_status.get_dsl_status()
 
         logger.info(
             "Is linked: "
-            + str(wlan_status["linked"])
+            + str(dsl_status["linked"])
             + " -=- Is Connected: "
-            + str(wlan_status["connected"])
+            + str(dsl_status["connected"])
         )
 
-        if wlan_status:
+        if dsl_status:
             current_period = 30
         else:
             current_period = 2
 
-        last_wlan_check = time.monotonic()
+        last_dsl_check = time.monotonic()
     if keyboard_active:
         point = touch_screen.touch_point
 
@@ -209,16 +274,33 @@ while True:
 
                 pyportal.play_file(soundBeep)
 
-                keyboard.send(
-                    Keycode.COMMAND,
-                    Keycode.CONTROL,
-                    Keycode.OPTION,
-                    Keycode.SHIFT,
-                    Keycode.ONE,
-                )
+                for i, button in enumerate(buttons):
+                    if button.contains((x, y, 65000)):
+                        logger.info(f"Button {button} pressed")
+
+                        if i == 0:
+                            logger.info("Developer Scene Selected")
+
+                            keyboard.send(
+                                Keycode.COMMAND,
+                                Keycode.CONTROL,
+                                Keycode.OPTION,
+                                Keycode.SHIFT,
+                                Keycode.ONE,
+                            )
+                        elif i == 1:
+                            logger.info("Office Scene Selected")
+
+                            keyboard.send(
+                                Keycode.COMMAND,
+                                Keycode.CONTROL,
+                                Keycode.OPTION,
+                                Keycode.SHIFT,
+                                Keycode.TWO,
+                            )
 
                 # clear list for next detection
                 point_list = []
 
                 # sleep to avoid pressing two buttons on accident
-                time.sleep(0.5)
+                time.sleep(0.2)
