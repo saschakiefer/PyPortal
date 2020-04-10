@@ -14,6 +14,7 @@ from adafruit_hid.keycode import Keycode
 from adafruit_pyportal import PyPortal
 from digitalio import DigitalInOut
 
+
 esp32_cs = DigitalInOut(board.ESP_CS)
 esp32_ready = DigitalInOut(board.ESP_BUSY)
 esp32_reset = DigitalInOut(board.ESP_RESET)
@@ -36,6 +37,8 @@ pyportal = PyPortal(esp=esp, external_spi=spi, debug=True)
 display = board.DISPLAY
 display.rotation = 0
 display.auto_brightness = True
+
+pyportal.set_background("/images/fractal_loading.bmp")
 
 # Initialize Touchscreen
 touch_screen = adafruit_touchscreen.Touchscreen(
@@ -158,6 +161,8 @@ point_list = []
 current_period = 0  # ensure, that it immidiately starts
 last_wlan_check = time.monotonic()
 
+pyportal.set_background("/images/fractal.bmp")
+
 logger.info("Waiting for input")
 while True:
     if last_wlan_check + current_period < time.monotonic():
@@ -199,13 +204,13 @@ while True:
 
                 pyportal.play_file(soundBeep)
 
-                keyboard.send(
-                    Keycode.COMMAND,
-                    Keycode.CONTROL,
-                    Keycode.OPTION,
-                    Keycode.SHIFT,
-                    Keycode.ONE,
-                )
+                # keyboard.send(
+                #     Keycode.COMMAND,
+                #     Keycode.CONTROL,
+                #     Keycode.OPTION,
+                #     Keycode.SHIFT,
+                #     Keycode.ONE,
+                # )
 
                 # clear list for next detection
                 point_list = []
