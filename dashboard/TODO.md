@@ -1,0 +1,2 @@
+- [ ] Capture Error when sending the command to the host
+- [ ] Play an error song

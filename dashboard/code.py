@@ -250,8 +250,8 @@ while True:
             + str(dsl_status["connected"])
         )
 
-        if dsl_status:
-            current_period = 30
+        if dsl_status["connected"]:
+            current_period = 15
         else:
             current_period = 2
 
