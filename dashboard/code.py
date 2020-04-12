@@ -109,17 +109,18 @@ font.load_glyphs(b"abcdefghjiklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789
 
 # Buttons
 BUTTON_HEIGHT = int(screen_height / 4.5)
-BUTTON_WIDTH = int(screen_width / 2)
+BUTTON_WIDTH = int(screen_width / 3)
 BUTTON_Y = int(screen_height - BUTTON_HEIGHT)
+BUTTON_PADDING = 8
 
 buttons = []
 
 button_action_1 = Button(
-    x=0,
-    y=BUTTON_Y,
-    width=BUTTON_WIDTH,
-    height=BUTTON_HEIGHT,
-    label="Developer Scene",
+    x=0 + BUTTON_PADDING,
+    y=BUTTON_Y + BUTTON_PADDING,
+    width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
+    height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
+    label="Developer\n   Scene",
     label_font=font,
     label_color=0xFF7E00,
     fill_color=0x5C5B5C,
@@ -127,16 +128,17 @@ button_action_1 = Button(
     selected_fill=0x1A1A1A,
     selected_outline=0x2E2E2E,
     selected_label=0x525252,
+    style=Button.ROUNDRECT,
 )
 
 buttons.append(button_action_1)
 
 button_action_2 = Button(
-    x=0 + BUTTON_WIDTH,
-    y=BUTTON_Y,
-    width=BUTTON_WIDTH,
-    height=BUTTON_HEIGHT,
-    label="Office Scene",
+    x=0 + BUTTON_WIDTH + BUTTON_PADDING,
+    y=BUTTON_Y + BUTTON_PADDING,
+    width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
+    height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
+    label="Web Developer\n       Scene",
     label_font=font,
     label_color=0xFF7E00,
     fill_color=0x5C5B5C,
@@ -144,9 +146,28 @@ button_action_2 = Button(
     selected_fill=0x1A1A1A,
     selected_outline=0x2E2E2E,
     selected_label=0x525252,
+    style=Button.ROUNDRECT,
 )
 
 buttons.append(button_action_2)
+
+button_action_3 = Button(
+    x=0 + BUTTON_WIDTH + BUTTON_WIDTH + BUTTON_PADDING,
+    y=BUTTON_Y + BUTTON_PADDING,
+    width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
+    height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
+    label="Office\nScene",
+    label_font=font,
+    label_color=0xFF7E00,
+    fill_color=0x5C5B5C,
+    outline_color=0x767676,
+    selected_fill=0x1A1A1A,
+    selected_outline=0x2E2E2E,
+    selected_label=0x525252,
+    style=Button.ROUNDRECT,
+)
+
+buttons.append(button_action_3)
 
 [main_group.append(button.group) for button in buttons]
 
@@ -286,9 +307,19 @@ while True:
                                 Keycode.CONTROL,
                                 Keycode.OPTION,
                                 Keycode.SHIFT,
-                                Keycode.ONE,
+                                Keycode.FOUR,
                             )
                         elif i == 1:
+                            logger.info("Web Developer Scene Selected")
+
+                            keyboard.send(
+                                Keycode.COMMAND,
+                                Keycode.CONTROL,
+                                Keycode.OPTION,
+                                Keycode.SHIFT,
+                                Keycode.ONE,
+                            )
+                        elif i == 2:
                             logger.info("Office Scene Selected")
 
                             keyboard.send(
