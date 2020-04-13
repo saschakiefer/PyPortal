@@ -9,6 +9,10 @@ ls -al /dev/tty.*
 screen /dev/tty.usbmodem<number> 115200
 ```
 
+To get out of screen press `Ctrl-a` + `Ctrl-d`
+
+_Note: In case screen can't connect to PTY, check the running processes if there is still one running, which wasn't quit properly._
+
 ## Minmial Modules
 
 Use the `requirements_min.txt` file as a basis for new Projects. These are the ones, that usually are needed. Copy the file to your project directory and rename it to `requirements.txt`. You can use `circup` to install/remove packages. `circup freeze -r`creates/overrites the `requirements.txt`with the currently installed libraries on the device.
