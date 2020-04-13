@@ -122,12 +122,10 @@ button_action_1 = Button(
     height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
     label="Developer\n   Scene",
     label_font=font,
-    label_color=0xFF7E00,
-    fill_color=0x5C5B5C,
-    outline_color=0x767676,
-    selected_fill=0x1A1A1A,
-    selected_outline=0x2E2E2E,
-    selected_label=0x525252,
+    label_color=0xD7C6E0,
+    fill_color=0x601D83,
+    selected_fill=0xD7C6E0,
+    selected_label=0x601D83,
     style=Button.ROUNDRECT,
 )
 
@@ -140,12 +138,10 @@ button_action_2 = Button(
     height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
     label="Web Developer\n       Scene",
     label_font=font,
-    label_color=0xFF7E00,
-    fill_color=0x5C5B5C,
-    outline_color=0x767676,
-    selected_fill=0x1A1A1A,
-    selected_outline=0x2E2E2E,
-    selected_label=0x525252,
+    label_color=0xD7C6E0,
+    fill_color=0x601D83,
+    selected_fill=0xD7C6E0,
+    selected_label=0x601D83,
     style=Button.ROUNDRECT,
 )
 
@@ -158,12 +154,10 @@ button_action_3 = Button(
     height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
     label="Office\nScene",
     label_font=font,
-    label_color=0xFF7E00,
-    fill_color=0x5C5B5C,
-    outline_color=0x767676,
-    selected_fill=0x1A1A1A,
-    selected_outline=0x2E2E2E,
-    selected_label=0x525252,
+    label_color=0xD7C6E0,
+    fill_color=0x601D83,
+    selected_fill=0xD7C6E0,
+    selected_label=0x601D83,
     style=Button.ROUNDRECT,
 )
 
@@ -298,6 +292,7 @@ while True:
                 for i, button in enumerate(buttons):
                     if button.contains((x, y, 65000)):
                         logger.info(f"Button {button} pressed")
+                        button.selected = True
 
                         if i == 0:
                             logger.info("Developer Scene Selected")
@@ -309,6 +304,9 @@ while True:
                                 Keycode.SHIFT,
                                 Keycode.FOUR,
                             )
+
+                            break
+
                         elif i == 1:
                             logger.info("Web Developer Scene Selected")
 
@@ -319,6 +317,8 @@ while True:
                                 Keycode.SHIFT,
                                 Keycode.ONE,
                             )
+
+                            break
                         elif i == 2:
                             logger.info("Office Scene Selected")
 
@@ -330,8 +330,13 @@ while True:
                                 Keycode.TWO,
                             )
 
+                            break
+
                 # clear list for next detection
                 point_list = []
 
                 # sleep to avoid pressing two buttons on accident
                 time.sleep(0.2)
+
+                # change the button state again
+                button.selected = False

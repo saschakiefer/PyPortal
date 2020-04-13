@@ -9,7 +9,7 @@ ls -al /dev/tty.*
 screen /dev/tty.usbmodem<number> 115200
 ```
 
-To get out of screen press `Ctrl-a` + `Ctrl-d`
+To get out of screen press `Ctrl-a` + (`d` or `Ctrl-d`)
 
 _Note: In case screen can't connect to PTY, check the running processes if there is still one running, which wasn't quit properly._
 
