@@ -2,6 +2,13 @@
 
 [Adafruit CircuitPython API Reference — Adafruit CircuitPython 0.0.0 documentation](https://circuitpython.readthedocs.io/en/latest/docs/index.html)
 
+## Connect Serial Console
+
+```Shell
+ls -al /dev/tty.*
+screen /dev/tty.usbmodem<number> 115200
+```
+
 ## Minmial Modules
 
 Use the `requirements_min.txt` file as a basis for new Projects. These are the ones, that usually are needed. Copy the file to your project directory and rename it to `requirements.txt`. You can use `circup` to install/remove packages. `circup freeze -r`creates/overrites the `requirements.txt`with the currently installed libraries on the device.
@@ -84,6 +91,7 @@ logger.setLevel(logging.INFO)  # change as desired
 ```
 
 ## Create User Interfaces
+
 [Overview | Making a PyPortal User Interface with DisplayIO | Adafruit Learning System](https://learn.adafruit.com/making-a-pyportal-user-interface-displayio/overview)
 
 ## Simulate a Keyboard
