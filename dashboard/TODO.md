@@ -1,2 +1,3 @@
 - [ ] Capture Error when sending the command to the host
 - [ ] Play an error song
+- [ ] decouple wifi. They Trigger can still run w/o wifi present. Currently the script stops until wifi connected

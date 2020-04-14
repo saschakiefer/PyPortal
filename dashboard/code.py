@@ -90,18 +90,36 @@ requests.set_socket(socket, esp)
 # Sound effects
 soundBeep = "/sounds/beep.wav"
 
+# This will handel switching Images and Icons
+def set_image(group, filename):
+    """Set the image file for a given goup for display.
+    This is most useful for Icons or image slideshows.
+        :param group: The chosen group
+        :param filename: The filename of the chosen image
+    """
+    print("Set image to ", filename)
+    if group:
+        group.pop()
+
+    if not filename:
+        return  # we're done, no icon desired
+
+    image_file = open(filename, "rb")
+    image = displayio.OnDiskBitmap(image_file)
+    try:
+        image_sprite = displayio.TileGrid(
+            image, pixel_shader=displayio.ColorConverter()
+        )
+    except TypeError:
+        image_sprite = displayio.TileGrid(
+            image, pixel_shader=displayio.ColorConverter(), position=(0, 0)
+        )
+    group.append(image_sprite)
+
+
 # Display Groups + Background Image
 main_group = displayio.Group(max_size=15)
-
-image_file = open("/images/fractal.bmp", "rb")
-image = displayio.OnDiskBitmap(image_file)
-try:
-    image_sprite = displayio.TileGrid(image, pixel_shader=displayio.ColorConverter())
-except TypeError:
-    image_sprite = displayio.TileGrid(
-        image, pixel_shader=displayio.ColorConverter(), position=(0, 0)
-    )
-main_group.append(image_sprite)
+set_image(main_group, "/images/fractal.bmp")
 
 # Set the font and preload letters
 font = bitmap_font.load_font("/fonts/Helvetica-Bold-16.bdf")
@@ -164,6 +182,36 @@ button_action_3 = Button(
 buttons.append(button_action_3)
 
 [main_group.append(button.group) for button in buttons]
+
+# Initialize the status Icons
+linked_group = displayio.Group(max_size=1)
+linked_group.x = 5
+linked_group.y = 5
+linked_group.scale = 1
+set_image(linked_group, "/images/unlinked.bmp")
+
+main_group.append(linked_group)
+
+wifi_group = displayio.Group(max_size=1)
+wifi_group.x = 52
+wifi_group.y = 5
+wifi_group.scale = 1
+set_image(wifi_group, "/images/wifi_on.bmp")
+
+main_group.append(wifi_group)
+
+keyboard_group = displayio.Group(max_size=1)
+keyboard_group.x = 99
+keyboard_group.y = 5
+keyboard_group.scale = 1
+
+if keyboard_active:
+    set_image(keyboard_group, "/images/keyboard_on.bmp")
+else:
+    set_image(keyboard_group, "/images/keyboard_off.bmp")
+
+
+main_group.append(keyboard_group)
 
 
 class Fritbox_Status:
@@ -266,8 +314,10 @@ while True:
         )
 
         if dsl_status["connected"]:
+            set_image(linked_group, "/images/linked.bmp")
             current_period = 15
         else:
+            set_image(linked_group, "/images/unlinked.bmp")
             current_period = 2
 
         last_dsl_check = time.monotonic()
