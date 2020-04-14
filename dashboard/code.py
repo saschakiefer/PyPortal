@@ -1,6 +1,6 @@
 import gc
-import re
 import time
+from secrets import secrets
 
 import adafruit_esp32spi.adafruit_esp32spi_socket as socket
 import adafruit_requests as requests
@@ -17,8 +17,8 @@ from adafruit_esp32spi import adafruit_esp32spi
 from adafruit_hid.keyboard import Keyboard
 from adafruit_hid.keycode import Keycode
 from adafruit_pyportal import PyPortal
+from fritz_box import FritzboxStatus
 from digitalio import DigitalInOut
-
 
 # -------------------- Initialize some static values -------------------
 DEBUG_MODE = True
@@ -77,13 +77,6 @@ try:
 except OSError:
     keyboard_active = False
     log("No keyboard found")
-
-# Get wifi details and more from a secrets.py file
-try:
-    from secrets import secrets
-except ImportError:
-    log("WiFi secrets are kept in secrets.py, please add them there!")
-    raise
 
 # Connect to AP
 log("Connecting to AP...")
@@ -236,88 +229,7 @@ quote_label.x = 10
 quote_label.y = 120
 main_group.append(quote_label)
 
-
-class Fritbox_Status:
-    """Encapsulate the FritBox status calls via the upnp protocol
-    TODO: make the class independent of gloabl variables (secret, logger) and
-    extract it to an own module
-    """
-
-    def __init__(self):
-        self.fritz_url_base = f"http://{secrets['access_point_ip']}:{secrets['access_point_port']}/igdupnp/control/"
-        self.ritz_sap_action_base = "urn:schemas-upnp-org:service:"
-
-        self.fritz_soap_connection = '<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:GetStatusInfo xmlns:u="urn:schemas-upnp-org:service:WANIPConnection:1"></u:GetStatusInfo></s:Body></s:Envelope>'
-
-        self.fritz_soap_link_status = '<?xml version="1.0" encoding="utf-8"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:GetCommonLinkProperties xmlns:u="urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1"></u:GetCommonLinkProperties></s:Body></s:Envelope>'
-
-        self.fritz_headers = {
-            "charset": "utf-8",
-            "content-type": "text/xml",
-            "soapaction": None,
-        }
-
-    def get_dsl_status(self):
-        return {
-            "linked": self.is_linked(),
-            "connected": self.is_connected(),
-        }
-
-    def is_connected(self):
-        status = self.do_call(
-            url_suffix="WANIPConn1",
-            soapaction="urn:schemas-upnp-org:service:WANIPConnection:1#GetStatusInfo",
-            body=self.fritz_soap_connection,
-        )
-
-        return status == "Connected"
-
-    def is_linked(self):
-        status = self.do_call(
-            url_suffix="WANCommonIFC1",
-            soapaction="urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1#GetCommonLinkProperties",
-            body=self.fritz_soap_link_status,
-        )
-
-        return status == "Up"
-
-    def do_call(self, url_suffix=None, soapaction=None, body=None):
-        gc.collect()
-
-        url = f"{self.fritz_url_base}{url_suffix}"
-
-        headers = self.fritz_headers.copy()
-        headers["soapaction"] = soapaction
-
-        try:
-            gc.collect()
-            response = requests.post(url, data=body, headers=headers, timeout=2)
-            gc.collect()
-        except MemoryError:
-            supervisor.reload()
-        except:
-            log("Couldn't get DSL status, will try again later.")
-            return "Unknown"  # We just ignore this and wait for the next request
-
-        if url_suffix == "WANIPConn1":
-            regex = r"<NewConnectionStatus>(.*)<\/NewConnectionStatus>"
-        else:
-            regex = r"<NewPhysicalLinkStatus>(.*)<\/NewPhysicalLinkStatus>"
-
-        matches = re.search(regex, response.text)
-        status = matches.groups()[0]
-
-        log(f"Received DSL state for {url_suffix}: {status}")
-
-        response = None
-        regex = None
-        matches = None
-        gc.collect()
-
-        return status
-
-
-fritz_status = Fritbox_Status()
+fritz_status = FritzboxStatus(pyportal, debug=DEBUG_MODE)
 
 # We collect 3 points to simulate a "long press" of the button
 point_list = []
