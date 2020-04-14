@@ -3,7 +3,6 @@ import re
 import time
 
 import adafruit_esp32spi.adafruit_esp32spi_socket as socket
-import adafruit_logging as logging
 import adafruit_requests as requests
 import adafruit_touchscreen
 import board
@@ -20,19 +19,23 @@ from adafruit_hid.keycode import Keycode
 from adafruit_pyportal import PyPortal
 from digitalio import DigitalInOut
 
+
+# -------------------- Initialize some static values -------------------
+DEBUG_MODE = True
+
+SCREEN_WIDTH = 480
+SCREEN_HEIGHT = 320
+
 esp32_cs = DigitalInOut(board.ESP_CS)
 esp32_ready = DigitalInOut(board.ESP_BUSY)
 esp32_reset = DigitalInOut(board.ESP_RESET)
 esp32_gpio0 = DigitalInOut(board.ESP_GPIO0)
 
-screen_width = 480
-screen_height = 320
+# -------------------- Some helper functions ---------------------------
+def log(text):
+    if DEBUG_MODE:
+        print(text)
 
-# Set up logging
-logger = logging.getLogger("dashboard")
-logger.setLevel(logging.INFO)  # change as desired
-
-logger.info("My Multi Dasboard")
 
 # Initialize WIFI Microncontroller
 spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
@@ -46,6 +49,7 @@ pyportal = PyPortal(
     external_spi=spi,
     url="https://www.adafruit.com/api/quotes.php",
     json_path=([0, "text"], [0, "author"]),
+    debug=DEBUG_MODE,
 )
 display = board.DISPLAY
 display.rotation = 0
@@ -60,7 +64,7 @@ touch_screen = adafruit_touchscreen.Touchscreen(
     board.TOUCH_YD,
     board.TOUCH_YU,
     calibration=((6272, 60207), (7692, 56691)),
-    size=(screen_width, screen_height),
+    size=(SCREEN_WIDTH, SCREEN_HEIGHT),
 )
 
 # Initiallize the Keyboard
@@ -69,28 +73,28 @@ try:
     # correct one from the list
     keyboard = Keyboard(usb_hid.devices)
     keyboard_active = True
-    logger.info("Keyboard activated")
+    log("Keyboard activated")
 except OSError:
     keyboard_active = False
-    logger.warning("No keyboard found")
+    log("No keyboard found")
 
 # Get wifi details and more from a secrets.py file
 try:
     from secrets import secrets
 except ImportError:
-    logger.error("WiFi secrets are kept in secrets.py, please add them there!")
+    log("WiFi secrets are kept in secrets.py, please add them there!")
     raise
 
 # Connect to AP
-logger.info("Connecting to AP...")
+log("Connecting to AP...")
 while not esp.is_connected:
     try:
         esp.connect_AP(secrets["ssid"], secrets["password"])
     except RuntimeError as e:
-        logger.warning("could not connect to AP, retrying: ", e)
+        log("could not connect to AP, retrying: ", e)
         continue
 
-logger.info("Connected to: " + str(esp.ssid, "utf-8"))
+log("Connected to: " + str(esp.ssid, "utf-8"))
 
 # Init the requests object
 requests.set_socket(socket, esp)
@@ -133,9 +137,9 @@ font = bitmap_font.load_font("/fonts/Helvetica-Bold-16.bdf")
 font.load_glyphs(b"abcdefghjiklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890- ()")
 
 # Buttons
-BUTTON_HEIGHT = int(screen_height / 4.5)
-BUTTON_WIDTH = int(screen_width / 3)
-BUTTON_Y = int(screen_height - BUTTON_HEIGHT)
+BUTTON_HEIGHT = int(SCREEN_HEIGHT / 4.5)
+BUTTON_WIDTH = int(SCREEN_WIDTH / 3)
+BUTTON_Y = int(SCREEN_HEIGHT - BUTTON_HEIGHT)
 BUTTON_PADDING = 8
 
 buttons = []
@@ -255,8 +259,8 @@ class Fritbox_Status:
 
     def get_dsl_status(self):
         return {
-            "connected": self.is_connected(),
             "linked": self.is_linked(),
+            "connected": self.is_connected(),
         }
 
     def is_connected(self):
@@ -279,7 +283,6 @@ class Fritbox_Status:
 
     def do_call(self, url_suffix=None, soapaction=None, body=None):
         gc.collect()
-        logger.debug("Get: " + url_suffix)
 
         url = f"{self.fritz_url_base}{url_suffix}"
 
@@ -293,7 +296,7 @@ class Fritbox_Status:
         except MemoryError:
             supervisor.reload()
         except:
-            logger.warning("Couldn't get DSL status, will try again later.")
+            log("Couldn't get DSL status, will try again later.")
             return "Unknown"  # We just ignore this and wait for the next request
 
         if url_suffix == "WANIPConn1":
@@ -304,7 +307,7 @@ class Fritbox_Status:
         matches = re.search(regex, response.text)
         status = matches.groups()[0]
 
-        logger.debug("Received state: " + status)
+        log(f"Received DSL state for {url_suffix}: {status}")
 
         response = None
         regex = None
@@ -327,7 +330,7 @@ last_quote_check = time.monotonic() - 3601
 
 board.DISPLAY.show(main_group)
 
-logger.info("Waiting for input")
+log("Start event loop")
 while True:
     # CHeck status
     if last_dsl_check + current_period < time.monotonic():
@@ -337,13 +340,6 @@ while True:
         dsl is gone and increased back to 30 seconds when it's back
         """
         dsl_status = fritz_status.get_dsl_status()
-
-        logger.info(
-            "Is linked: "
-            + str(dsl_status["linked"])
-            + " -=- Is Connected: "
-            + str(dsl_status["connected"])
-        )
 
         if dsl_status["connected"]:
             set_image(linked_group, "/images/linked.bmp")
@@ -376,7 +372,7 @@ while True:
         except MemoryError:
             supervisor.reload()
         except:
-            logger.warning("Couldn't get quote, try again later.")
+            log("Couldn't get quote, try again later.")
         finally:
             quote_json = None
             quote = None
@@ -400,17 +396,17 @@ while True:
                 # two get the x,y of the touch
                 x = (point_list[1][0] + point_list[2][0]) / 2
                 y = (point_list[1][1] + point_list[2][1]) / 2
-                logger.info("(" + str(x) + "/" + str(y) + ") pressed")
+                log("(" + str(x) + "/" + str(y) + ") pressed")
 
                 pyportal.play_file(soundBeep)
 
                 for i, button in enumerate(buttons):
                     if button.contains((x, y, 65000)):
-                        logger.info(f"Button {button} pressed")
+                        log(f"Button {button} pressed")
                         button.selected = True
 
                         if i == 0:
-                            logger.info("Developer Scene Selected")
+                            log("Developer Scene Selected")
 
                             keyboard.send(
                                 Keycode.COMMAND,
@@ -423,7 +419,7 @@ while True:
                             break
 
                         elif i == 1:
-                            logger.info("Web Developer Scene Selected")
+                            log("Web Developer Scene Selected")
 
                             keyboard.send(
                                 Keycode.COMMAND,
@@ -435,7 +431,7 @@ while True:
 
                             break
                         elif i == 2:
-                            logger.info("Office Scene Selected")
+                            log("Office Scene Selected")
 
                             keyboard.send(
                                 Keycode.COMMAND,
