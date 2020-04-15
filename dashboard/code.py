@@ -20,9 +20,10 @@ from adafruit_pyportal import PyPortal
 from fritz_box import FritzboxStatus
 from digitalio import DigitalInOut
 from button_controller import ButtonController
+from status_icon_controller import StatusIconController
 
 # -------------------- Initialize some static values -------------------
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 SCREEN_WIDTH = 480
 SCREEN_HEIGHT = 320
@@ -40,16 +41,7 @@ def log(text):
         print(text)
 
 
-# This will handel switching Images and Icons
 def set_image(group, filename):
-    """Set the image file for a given goup for display.
-    This is most useful for Icons or image slideshows.
-        :param group: The chosen group
-        :param filename: The filename of the chosen image
-    """
-    if group:
-        group.pop()
-
     if not filename:
         return  # we're done, no icon desired
 
@@ -64,6 +56,7 @@ def set_image(group, filename):
         image_sprite = displayio.TileGrid(
             image, pixel_shader=displayio.ColorConverter(), position=(0, 0)
         )
+
     group.append(image_sprite)
 
 
@@ -76,12 +69,12 @@ esp = adafruit_esp32spi.ESP_SPIcontrol(
 log("Wifi controller initialized")
 
 # Connect to access point
-log("Connecting to access point...")
+log("Connecting to access point.")
 while not esp.is_connected:
     try:
         esp.connect_AP(secrets["ssid"], secrets["password"])
     except RuntimeError as e:
-        log("could not connect to AP, retrying: ", e)
+        log("could not connect to sccess point, retrying: ", e)
         continue
 
 log("Connected to: " + str(esp.ssid, "utf-8"))
@@ -125,44 +118,28 @@ except OSError:
     keyboard_active = False
     log("No keyboard found")
 
-
-
 # Display Groups + Background Image
 main_group = displayio.Group(max_size=15)
 set_image(main_group, "/images/fractal.bmp")
 
+# -------------------- Setup display elements --------------------------
 
-# Initialize the status Icons
-linked_group = displayio.Group(max_size=1)
-linked_group.x = 5
-linked_group.y = 5
-linked_group.scale = 1
-set_image(linked_group, "/images/unlinked.bmp")
+fritz_status = FritzboxStatus(pyportal, debug=DEBUG_MODE)
+status_icon_controller = StatusIconController(debug=DEBUG_MODE)
+button_controller = ButtonController(
+    keyboard, screen_width=SCREEN_WIDTH, screen_height=SCREEN_HEIGHT, debug=DEBUG_MODE
+)
 
-main_group.append(linked_group)
+# Append the status icons to the main scene and set the ones we already know
+[main_group.append(group) for group in status_icon_controller.get_icons()]
 
-wifi_group = displayio.Group(max_size=1)
-wifi_group.x = 52
-wifi_group.y = 5
-wifi_group.scale = 1
-set_image(wifi_group, "/images/wifi_on.bmp")
+status_icon_controller.set_wifi_status(True)
+status_icon_controller.set_keyboard_status(keyboard_active)
 
-main_group.append(wifi_group)
+# Append the action buttons to the main scene
+[main_group.append(button.group) for button in button_controller.get_buttons()]
 
-keyboard_group = displayio.Group(max_size=1)
-keyboard_group.x = 99
-keyboard_group.y = 5
-keyboard_group.scale = 1
-
-if keyboard_active:
-    set_image(keyboard_group, "/images/keyboard_on.bmp")
-else:
-    set_image(keyboard_group, "/images/keyboard_off.bmp")
-
-
-main_group.append(keyboard_group)
-
-# Quote Label
+# Quote text area
 quote_font = bitmap_font.load_font("/fonts/Arial-ItalicMT-23.bdf")
 quote_font.load_glyphs(
     b"abcdefghjiklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890- ()"
@@ -173,18 +150,6 @@ quote_label = Label(quote_font, text="Loading Quote...", color=0xFED73F, max_gly
 quote_label.x = 10
 quote_label.y = 120
 main_group.append(quote_label)
-
-# -------------------- Setup display elements --------------------------
-# Fritzbox
-fritz_status = FritzboxStatus(pyportal, debug=DEBUG_MODE)
-
-# Action Button Row
-button_controller = ButtonController(
-    keyboard, screen_width=SCREEN_WIDTH, screen_height=SCREEN_HEIGHT
-)
-
-# Append the buttons to the main scene
-[main_group.append(button.group) for button in button_controller.get_buttons()]
 
 # ------------- Initialize some helpers for the main loop --------------
 # We collect 3 points to simulate a debounced button press. In addition
@@ -213,15 +178,15 @@ while True:
         dsl_status = fritz_status.get_dsl_status()
 
         if dsl_status["connected"]:
-            set_image(linked_group, "/images/linked.bmp")
+            status_icon_controller.set_dsl_status(True)
             current_dsl_check_period = 15
         else:
-            set_image(linked_group, "/images/unlinked.bmp")
+            status_icon_controller.set_dsl_status(False)
             current_dsl_check_period = 2
 
         last_dsl_check = time.monotonic()
 
-    # Load new quote
+    # Load new quote every hour
     if last_quote_check + 3600 < time.monotonic():
         try:
             quote_json = pyportal.fetch()
@@ -239,7 +204,6 @@ while True:
                 glyph_box = quote_font_hight.bounding_box
                 quote_label.text = ""  # Odd things happen without this
                 quote_label.text = new_quote
-
         except MemoryError:
             supervisor.reload()
         except:
