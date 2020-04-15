@@ -23,11 +23,11 @@ class ButtonController:
 
         # Initialize Buttons
         self.buttons = []
-        self.buttons.append(self._add_button("Developer\n   Scene"))
-        self.buttons.append(self._add_button("Web Developer\n       Scene"))
-        self.buttons.append(self._add_button("Office\nScene"))
+        self.buttons.append(self._create_button("Developer\n   Scene"))
+        self.buttons.append(self._create_button("Web Developer\n       Scene"))
+        self.buttons.append(self._create_button("Office\nScene"))
 
-    def _add_button(self, label):
+    def _create_button(self, label):
         button_x = (
             len(self.buttons) * self.button_width + ButtonController.BUTTON_PADDING
         )
