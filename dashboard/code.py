@@ -32,10 +32,39 @@ esp32_ready = DigitalInOut(board.ESP_BUSY)
 esp32_reset = DigitalInOut(board.ESP_RESET)
 esp32_gpio0 = DigitalInOut(board.ESP_GPIO0)
 
+BEEP_SOUND_FILE = "/sounds/beep.wav"
+
 # -------------------- Some helper functions ---------------------------
 def log(text):
     if DEBUG_MODE:
         print(text)
+
+
+# This will handel switching Images and Icons
+def set_image(group, filename):
+    """Set the image file for a given goup for display.
+    This is most useful for Icons or image slideshows.
+        :param group: The chosen group
+        :param filename: The filename of the chosen image
+    """
+    if group:
+        group.pop()
+
+    if not filename:
+        return  # we're done, no icon desired
+
+    image_file = open(filename, "rb")
+    image = displayio.OnDiskBitmap(image_file)
+
+    try:
+        image_sprite = displayio.TileGrid(
+            image, pixel_shader=displayio.ColorConverter()
+        )
+    except TypeError:
+        image_sprite = displayio.TileGrid(
+            image, pixel_shader=displayio.ColorConverter(), position=(0, 0)
+        )
+    group.append(image_sprite)
 
 
 # -------------------- Initialize the board ----------------------------
@@ -97,104 +126,11 @@ except OSError:
     log("No keyboard found")
 
 
-# Sound effects
-soundBeep = "/sounds/beep.wav"
-
-# This will handel switching Images and Icons
-def set_image(group, filename):
-    """Set the image file for a given goup for display.
-    This is most useful for Icons or image slideshows.
-        :param group: The chosen group
-        :param filename: The filename of the chosen image
-    """
-    if group:
-        group.pop()
-
-    if not filename:
-        return  # we're done, no icon desired
-
-    image_file = open(filename, "rb")
-    image = displayio.OnDiskBitmap(image_file)
-    try:
-        image_sprite = displayio.TileGrid(
-            image, pixel_shader=displayio.ColorConverter()
-        )
-    except TypeError:
-        image_sprite = displayio.TileGrid(
-            image, pixel_shader=displayio.ColorConverter(), position=(0, 0)
-        )
-    group.append(image_sprite)
-
 
 # Display Groups + Background Image
 main_group = displayio.Group(max_size=15)
 set_image(main_group, "/images/fractal.bmp")
 
-# # Set the font and preload letters
-# font = bitmap_font.load_font("/fonts/Helvetica-Bold-16.bdf")
-# font.load_glyphs(b"abcdefghjiklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890- ()")
-
-# # Buttons
-# BUTTON_HEIGHT = int(SCREEN_HEIGHT / 4.5)
-# BUTTON_WIDTH = int(SCREEN_WIDTH / 3)
-# BUTTON_Y = int(SCREEN_HEIGHT - BUTTON_HEIGHT)
-# BUTTON_PADDING = 8
-
-# buttons = []
-
-# button_action_1 = Button(
-#     x=0 + BUTTON_PADDING,
-#     y=BUTTON_Y + BUTTON_PADDING,
-#     width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
-#     height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
-#     label="Developer\n   Scene",
-#     label_font=font,
-#     label_color=0xD7C6E0,
-#     fill_color=0x601D83,
-#     selected_fill=0xD7C6E0,
-#     selected_label=0x601D83,
-#     style=Button.ROUNDRECT,
-# )
-
-# buttons.append(button_action_1)
-
-# button_action_2 = Button(
-#     x=0 + BUTTON_WIDTH + BUTTON_PADDING,
-#     y=BUTTON_Y + BUTTON_PADDING,
-#     width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
-#     height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
-#     label="Web Developer\n       Scene",
-#     label_font=font,
-#     label_color=0xD7C6E0,
-#     fill_color=0x601D83,
-#     selected_fill=0xD7C6E0,
-#     selected_label=0x601D83,
-#     style=Button.ROUNDRECT,
-# )
-
-# buttons.append(button_action_2)
-
-# button_action_3 = Button(
-#     x=0 + BUTTON_WIDTH + BUTTON_WIDTH + BUTTON_PADDING,
-#     y=BUTTON_Y + BUTTON_PADDING,
-#     width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
-#     height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
-#     label="Office\nScene",
-#     label_font=font,
-#     label_color=0xD7C6E0,
-#     fill_color=0x601D83,
-#     selected_fill=0xD7C6E0,
-#     selected_label=0x601D83,
-#     style=Button.ROUNDRECT,
-# )
-
-# buttons.append(button_action_3)
-
-button_controller = ButtonController(
-    screen_width=SCREEN_WIDTH, screen_height=SCREEN_HEIGHT
-)
-buttons = button_controller.get_buttons()
-[main_group.append(button.group) for button in buttons]
 
 # Initialize the status Icons
 linked_group = displayio.Group(max_size=1)
@@ -239,7 +175,16 @@ quote_label.y = 120
 main_group.append(quote_label)
 
 # -------------------- Setup display elements --------------------------
+# Fritzbox
 fritz_status = FritzboxStatus(pyportal, debug=DEBUG_MODE)
+
+# Action Button Row
+button_controller = ButtonController(
+    keyboard, screen_width=SCREEN_WIDTH, screen_height=SCREEN_HEIGHT
+)
+
+# Append the buttons to the main scene
+[main_group.append(button.group) for button in button_controller.get_buttons()]
 
 # ------------- Initialize some helpers for the main loop --------------
 # We collect 3 points to simulate a debounced button press. In addition
@@ -247,8 +192,8 @@ fritz_status = FritzboxStatus(pyportal, debug=DEBUG_MODE)
 point_list = []
 
 # Initialize the dsl check timer
-current_dsl_check_period = 0  # ensure, that it immidiately starts
-last_dsl_check = time.monotonic()
+current_dsl_check_period = 15
+last_dsl_check = time.monotonic() - 16
 
 # Initialize the quote check timer
 last_quote_check = time.monotonic() - 3601
@@ -256,7 +201,7 @@ last_quote_check = time.monotonic() - 3601
 # -------------------- Start the main loop -----------------------------
 board.DISPLAY.show(main_group)
 
-log("Start event loop")
+print("Starting event loop")
 
 while True:
     # Check dsl status
@@ -313,67 +258,19 @@ while True:
 
         if point:
             # append each touch connection to a list
-            # I had an issue with the first touch detected not being accurate
             point_list.append(point)
 
             # after three trouch detections have occured.
             if len(point_list) == 3:
                 # discard the first touch detection and average the other
                 # two get the x,y of the touch
-                x = (point_list[1][0] + point_list[2][0]) / 2
-                y = (point_list[1][1] + point_list[2][1]) / 2
+                x = int((point_list[1][0] + point_list[2][0]) / 2)
+                y = int((point_list[1][1] + point_list[2][1]) / 2)
                 log("(" + str(x) + "/" + str(y) + ") pressed")
 
-                pyportal.play_file(soundBeep)
+                pyportal.play_file(BEEP_SOUND_FILE)
 
-                for i, button in enumerate(buttons):
-                    if button.contains((x, y, 65000)):
-                        log(f"Button {button} pressed")
-                        button.selected = True
-
-                        if i == 0:
-                            log("Developer Scene Selected")
-
-                            keyboard.send(
-                                Keycode.COMMAND,
-                                Keycode.CONTROL,
-                                Keycode.OPTION,
-                                Keycode.SHIFT,
-                                Keycode.FOUR,
-                            )
-
-                            break
-
-                        elif i == 1:
-                            log("Web Developer Scene Selected")
-
-                            keyboard.send(
-                                Keycode.COMMAND,
-                                Keycode.CONTROL,
-                                Keycode.OPTION,
-                                Keycode.SHIFT,
-                                Keycode.ONE,
-                            )
-
-                            break
-                        elif i == 2:
-                            log("Office Scene Selected")
-
-                            keyboard.send(
-                                Keycode.COMMAND,
-                                Keycode.CONTROL,
-                                Keycode.OPTION,
-                                Keycode.SHIFT,
-                                Keycode.TWO,
-                            )
-
-                            break
+                button_controller.check_and_send_shortcut_to_host(x, y)
 
                 # clear list for next detection
                 point_list = []
-
-                # sleep to avoid pressing two buttons on accident
-                time.sleep(0.2)
-
-                # change the button state again
-                button.selected = False
