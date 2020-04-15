@@ -22,6 +22,7 @@ from digitalio import DigitalInOut
 from button_controller import ButtonController
 from status_icon_controller import StatusIconController
 
+
 # -------------------- Initialize some static values -------------------
 DEBUG_MODE = False
 
@@ -34,6 +35,7 @@ esp32_reset = DigitalInOut(board.ESP_RESET)
 esp32_gpio0 = DigitalInOut(board.ESP_GPIO0)
 
 BEEP_SOUND_FILE = "/sounds/beep.wav"
+
 
 # -------------------- Some helper functions ---------------------------
 def log(text):
@@ -122,8 +124,8 @@ except OSError:
 main_group = displayio.Group(max_size=15)
 set_image(main_group, "/images/fractal.bmp")
 
-# -------------------- Setup display elements --------------------------
 
+# -------------------- Setup display elements --------------------------
 fritz_status = FritzboxStatus(pyportal, debug=DEBUG_MODE)
 status_icon_controller = StatusIconController(debug=DEBUG_MODE)
 button_controller = ButtonController(
@@ -151,6 +153,7 @@ quote_label.x = 10
 quote_label.y = 120
 main_group.append(quote_label)
 
+
 # ------------- Initialize some helpers for the main loop --------------
 # We collect 3 points to simulate a debounced button press. In addition
 # the first touch point usually is not correct, so we discard that
@@ -162,6 +165,7 @@ last_dsl_check = time.monotonic() - 16
 
 # Initialize the quote check timer
 last_quote_check = time.monotonic() - 3601
+
 
 # -------------------- Start the main loop -----------------------------
 board.DISPLAY.show(main_group)
