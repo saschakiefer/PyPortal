@@ -19,6 +19,7 @@ from adafruit_hid.keycode import Keycode
 from adafruit_pyportal import PyPortal
 from fritz_box import FritzboxStatus
 from digitalio import DigitalInOut
+from button_controller import ButtonController
 
 # -------------------- Initialize some static values -------------------
 DEBUG_MODE = True
@@ -46,7 +47,7 @@ esp = adafruit_esp32spi.ESP_SPIcontrol(
 log("Wifi controller initialized")
 
 # Connect to access point
-log("Connecting to AP...")
+log("Connecting to access point...")
 while not esp.is_connected:
     try:
         esp.connect_AP(secrets["ssid"], secrets["password"])
@@ -60,7 +61,7 @@ log("Connected to: " + str(esp.ssid, "utf-8"))
 pyportal = PyPortal(
     esp=esp,
     external_spi=spi,
-    url="https://www.adafruit.com/api/quotes.php",
+    url="https://www.adafruit.com/api/quotes.php",  # Only used for the quotes
     json_path=([0, "text"], [0, "author"]),
     debug=DEBUG_MODE,
 )
@@ -129,66 +130,70 @@ def set_image(group, filename):
 main_group = displayio.Group(max_size=15)
 set_image(main_group, "/images/fractal.bmp")
 
-# Set the font and preload letters
-font = bitmap_font.load_font("/fonts/Helvetica-Bold-16.bdf")
-font.load_glyphs(b"abcdefghjiklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890- ()")
+# # Set the font and preload letters
+# font = bitmap_font.load_font("/fonts/Helvetica-Bold-16.bdf")
+# font.load_glyphs(b"abcdefghjiklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890- ()")
 
-# Buttons
-BUTTON_HEIGHT = int(SCREEN_HEIGHT / 4.5)
-BUTTON_WIDTH = int(SCREEN_WIDTH / 3)
-BUTTON_Y = int(SCREEN_HEIGHT - BUTTON_HEIGHT)
-BUTTON_PADDING = 8
+# # Buttons
+# BUTTON_HEIGHT = int(SCREEN_HEIGHT / 4.5)
+# BUTTON_WIDTH = int(SCREEN_WIDTH / 3)
+# BUTTON_Y = int(SCREEN_HEIGHT - BUTTON_HEIGHT)
+# BUTTON_PADDING = 8
 
-buttons = []
+# buttons = []
 
-button_action_1 = Button(
-    x=0 + BUTTON_PADDING,
-    y=BUTTON_Y + BUTTON_PADDING,
-    width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
-    height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
-    label="Developer\n   Scene",
-    label_font=font,
-    label_color=0xD7C6E0,
-    fill_color=0x601D83,
-    selected_fill=0xD7C6E0,
-    selected_label=0x601D83,
-    style=Button.ROUNDRECT,
+# button_action_1 = Button(
+#     x=0 + BUTTON_PADDING,
+#     y=BUTTON_Y + BUTTON_PADDING,
+#     width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
+#     height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
+#     label="Developer\n   Scene",
+#     label_font=font,
+#     label_color=0xD7C6E0,
+#     fill_color=0x601D83,
+#     selected_fill=0xD7C6E0,
+#     selected_label=0x601D83,
+#     style=Button.ROUNDRECT,
+# )
+
+# buttons.append(button_action_1)
+
+# button_action_2 = Button(
+#     x=0 + BUTTON_WIDTH + BUTTON_PADDING,
+#     y=BUTTON_Y + BUTTON_PADDING,
+#     width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
+#     height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
+#     label="Web Developer\n       Scene",
+#     label_font=font,
+#     label_color=0xD7C6E0,
+#     fill_color=0x601D83,
+#     selected_fill=0xD7C6E0,
+#     selected_label=0x601D83,
+#     style=Button.ROUNDRECT,
+# )
+
+# buttons.append(button_action_2)
+
+# button_action_3 = Button(
+#     x=0 + BUTTON_WIDTH + BUTTON_WIDTH + BUTTON_PADDING,
+#     y=BUTTON_Y + BUTTON_PADDING,
+#     width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
+#     height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
+#     label="Office\nScene",
+#     label_font=font,
+#     label_color=0xD7C6E0,
+#     fill_color=0x601D83,
+#     selected_fill=0xD7C6E0,
+#     selected_label=0x601D83,
+#     style=Button.ROUNDRECT,
+# )
+
+# buttons.append(button_action_3)
+
+button_controller = ButtonController(
+    screen_width=SCREEN_WIDTH, screen_height=SCREEN_HEIGHT
 )
-
-buttons.append(button_action_1)
-
-button_action_2 = Button(
-    x=0 + BUTTON_WIDTH + BUTTON_PADDING,
-    y=BUTTON_Y + BUTTON_PADDING,
-    width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
-    height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
-    label="Web Developer\n       Scene",
-    label_font=font,
-    label_color=0xD7C6E0,
-    fill_color=0x601D83,
-    selected_fill=0xD7C6E0,
-    selected_label=0x601D83,
-    style=Button.ROUNDRECT,
-)
-
-buttons.append(button_action_2)
-
-button_action_3 = Button(
-    x=0 + BUTTON_WIDTH + BUTTON_WIDTH + BUTTON_PADDING,
-    y=BUTTON_Y + BUTTON_PADDING,
-    width=BUTTON_WIDTH - 2 * BUTTON_PADDING,
-    height=BUTTON_HEIGHT - 2 * BUTTON_PADDING,
-    label="Office\nScene",
-    label_font=font,
-    label_color=0xD7C6E0,
-    fill_color=0x601D83,
-    selected_fill=0xD7C6E0,
-    selected_label=0x601D83,
-    style=Button.ROUNDRECT,
-)
-
-buttons.append(button_action_3)
-
+buttons = button_controller.get_buttons()
 [main_group.append(button.group) for button in buttons]
 
 # Initialize the status Icons
@@ -226,7 +231,7 @@ quote_font = bitmap_font.load_font("/fonts/Arial-ItalicMT-23.bdf")
 quote_font.load_glyphs(
     b"abcdefghjiklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890- ()"
 )
-quote_font_hight = Label(font, text="M", color=0x03AD31, max_glyphs=10)
+quote_font_hight = Label(quote_font, text="M", color=0x03AD31, max_glyphs=10)
 
 quote_label = Label(quote_font, text="Loading Quote...", color=0xFED73F, max_glyphs=500)
 quote_label.x = 10

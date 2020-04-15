@@ -1,3 +1,1 @@
-- [ ] Capture Error when sending the command to the host
-- [ ] Play an error song
-- [ ] Check why logger.debug does not accept formatted strings
+- [ ] Fix backlight and brightness detection
