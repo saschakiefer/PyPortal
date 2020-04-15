@@ -2,8 +2,6 @@ import gc
 import time
 from secrets import secrets
 
-import adafruit_esp32spi.adafruit_esp32spi_socket as socket
-import adafruit_requests as requests
 import adafruit_touchscreen
 import board
 import busio
@@ -11,17 +9,14 @@ import displayio
 import supervisor
 import usb_hid
 from adafruit_bitmap_font import bitmap_font
-from adafruit_button import Button
 from adafruit_display_text.label import Label
 from adafruit_esp32spi import adafruit_esp32spi
 from adafruit_hid.keyboard import Keyboard
-from adafruit_hid.keycode import Keycode
 from adafruit_pyportal import PyPortal
-from fritz_box import FritzboxStatus
-from digitalio import DigitalInOut
 from button_controller import ButtonController
+from digitalio import DigitalInOut
+from fritz_box import FritzboxStatus
 from status_icon_controller import StatusIconController
-
 
 # -------------------- Initialize some static values -------------------
 DEBUG_MODE = False
