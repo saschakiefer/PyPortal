@@ -37,48 +37,15 @@ def log(text):
         print(text)
 
 
-# Initialize WIFI Microncontroller
+# -------------------- Initialize the board ----------------------------
+# Initialize WIFI microncontroller
 spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
 esp = adafruit_esp32spi.ESP_SPIcontrol(
     spi, esp32_cs, esp32_ready, esp32_reset, esp32_gpio0
 )
+log("Wifi controller initialized")
 
-# Screen Setup
-pyportal = PyPortal(
-    esp=esp,
-    external_spi=spi,
-    url="https://www.adafruit.com/api/quotes.php",
-    json_path=([0, "text"], [0, "author"]),
-    debug=DEBUG_MODE,
-)
-display = board.DISPLAY
-display.rotation = 0
-display.auto_brightness = True
-
-pyportal.set_background("/images/fractal_loading.bmp")
-
-# Initialize Touchscreen
-touch_screen = adafruit_touchscreen.Touchscreen(
-    board.TOUCH_XL,
-    board.TOUCH_XR,
-    board.TOUCH_YD,
-    board.TOUCH_YU,
-    calibration=((6272, 60207), (7692, 56691)),
-    size=(SCREEN_WIDTH, SCREEN_HEIGHT),
-)
-
-# Initiallize the Keyboard
-try:
-    # Initialize with the available USB devices. The constructur pics the
-    # correct one from the list
-    keyboard = Keyboard(usb_hid.devices)
-    keyboard_active = True
-    log("Keyboard activated")
-except OSError:
-    keyboard_active = False
-    log("No keyboard found")
-
-# Connect to AP
+# Connect to access point
 log("Connecting to AP...")
 while not esp.is_connected:
     try:
@@ -89,8 +56,45 @@ while not esp.is_connected:
 
 log("Connected to: " + str(esp.ssid, "utf-8"))
 
-# Init the requests object
-requests.set_socket(socket, esp)
+# PyPortal setup
+pyportal = PyPortal(
+    esp=esp,
+    external_spi=spi,
+    url="https://www.adafruit.com/api/quotes.php",
+    json_path=([0, "text"], [0, "author"]),
+    debug=DEBUG_MODE,
+)
+pyportal.set_background("/images/fractal_loading.bmp")
+log("Pyportal initialized")
+
+# Display setup
+display = board.DISPLAY
+display.rotation = 0
+display.auto_brightness = True
+log("Display initialized")
+
+# Touchscreen setup
+touch_screen = adafruit_touchscreen.Touchscreen(
+    board.TOUCH_XL,
+    board.TOUCH_XR,
+    board.TOUCH_YD,
+    board.TOUCH_YU,
+    calibration=((6272, 60207), (7692, 56691)),
+    size=(SCREEN_WIDTH, SCREEN_HEIGHT),
+)
+log("Touchscreen initialized")
+
+# Keyboard setup
+try:
+    # Initialize with the available USB devices. The constructur picks the
+    # correct one from the list
+    keyboard = Keyboard(usb_hid.devices)
+    keyboard_active = True
+    log("Keyboard activated")
+except OSError:
+    keyboard_active = False
+    log("No keyboard found")
+
 
 # Sound effects
 soundBeep = "/sounds/beep.wav"
@@ -229,36 +233,41 @@ quote_label.x = 10
 quote_label.y = 120
 main_group.append(quote_label)
 
+# -------------------- Setup display elements --------------------------
 fritz_status = FritzboxStatus(pyportal, debug=DEBUG_MODE)
 
-# We collect 3 points to simulate a "long press" of the button
+# ------------- Initialize some helpers for the main loop --------------
+# We collect 3 points to simulate a debounced button press. In addition
+# the first touch point usually is not correct, so we discard that
 point_list = []
 
-# initialize the dsl check
-current_period = 0  # ensure, that it immidiately starts
+# Initialize the dsl check timer
+current_dsl_check_period = 0  # ensure, that it immidiately starts
 last_dsl_check = time.monotonic()
 
+# Initialize the quote check timer
 last_quote_check = time.monotonic() - 3601
 
+# -------------------- Start the main loop -----------------------------
 board.DISPLAY.show(main_group)
 
 log("Start event loop")
+
 while True:
-    # CHeck status
-    if last_dsl_check + current_period < time.monotonic():
-        """ Only check the dsl every 30 seconds. Therefore there is an
-        own counter parallel to the endless loop that watches for keyboard
-        input. The check time is decreased to two seconds as soon as
-        dsl is gone and increased back to 30 seconds when it's back
+    # Check dsl status
+    if last_dsl_check + current_dsl_check_period < time.monotonic():
+        """ Only check the dsl every 30 seconds. The check time is decreased
+        to two seconds as soon as dsl is gone and increased back to
+        30 seconds when it's back
         """
         dsl_status = fritz_status.get_dsl_status()
 
         if dsl_status["connected"]:
             set_image(linked_group, "/images/linked.bmp")
-            current_period = 15
+            current_dsl_check_period = 15
         else:
             set_image(linked_group, "/images/unlinked.bmp")
-            current_period = 2
+            current_dsl_check_period = 2
 
         last_dsl_check = time.monotonic()
 
