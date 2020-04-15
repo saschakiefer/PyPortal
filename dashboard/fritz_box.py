@@ -91,16 +91,17 @@ class FritzboxStatus:
         return status == "Up"
 
     def _do_call(self, url_suffix=None, soapaction=None, body=None):
-        """Main method performaing the SOAP action. Returns the raw status
-        text.
+        """Main method performaing the SOAP action.
 
-        Parameters:
-        url_suffix -- command suffix for the url
-        soapaction -- SOAP header fields
-        body -- SOAP body
+        Keyword Arguments:
+            url_suffix {string} -- Command suffix for the url (default: {None})
+            soapaction {string} -- SOAP header fields (default: {None})
+            body {string} -- SOAP body (default: {None})
+
+        Returns:
+            string -- raw status text
         """
         gc.collect()
-
         url = f"{FritzboxStatus.fritz_url_base}{url_suffix}"
         headers = FritzboxStatus.fritz_headers.copy()
         headers["soapaction"] = soapaction
