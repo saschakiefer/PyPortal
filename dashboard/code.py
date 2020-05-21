@@ -9,6 +9,7 @@ import displayio
 import supervisor
 import usb_hid
 from adafruit_bitmap_font import bitmap_font
+from adafruit_button import Button
 from adafruit_display_text.label import Label
 from adafruit_esp32spi import adafruit_esp32spi
 from adafruit_hid.keyboard import Keyboard
@@ -136,6 +137,22 @@ status_icon_controller.set_keyboard_status(keyboard_active)
 # Append the action buttons to the main scene
 [main_group.append(button.group) for button in button_controller.get_buttons()]
 
+# Create Light Control Button
+dim_button = Button(
+    x=411,
+    y=5,
+    width=64,
+    height=32,
+    label="Dim",
+    label_font=button_controller.font,
+    label_color=0xD7C6E0,
+    fill_color=0x601D83,
+    selected_fill=0xD7C6E0,
+    selected_label=0x601D83,
+    style=Button.ROUNDRECT,
+)
+main_group.append(dim_button.group)
+
 # Quote text area
 quote_font = bitmap_font.load_font("/fonts/Arial-ItalicMT-23.bdf")
 quote_font.load_glyphs(
@@ -161,6 +178,9 @@ last_dsl_check = time.monotonic() - 16
 # Initialize the quote check timer
 last_quote_check = time.monotonic() - 3601
 
+# Display Status
+display_on = True
+pyportal.set_backlight(0.55)
 
 # -------------------- Start the main loop -----------------------------
 board.DISPLAY.show(main_group)
@@ -234,6 +254,16 @@ while True:
                 pyportal.play_file(BEEP_SOUND_FILE)
 
                 button_controller.check_and_send_shortcut_to_host(x, y)
+
+                if dim_button.contains((x, y, 65000)):
+                    print("dim button pressed")
+
+                    if display_on:
+                        pyportal.set_backlight(0)
+                    else:
+                        pyportal.set_backlight(0.55)
+
+                    display_on = not display_on
 
                 # clear list for next detection
                 point_list = []
