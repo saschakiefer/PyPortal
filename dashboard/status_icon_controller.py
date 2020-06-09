@@ -62,12 +62,7 @@ class StatusIconController:
         Returns:
             list -- list with group objects
         """
-        groups = []
-
-        for icon in self.icons.items():
-            groups.append(icon[1]["object"])
-
-        return groups
+        return [icon[1]["object"] for icon in self.icons.items()]
 
     def set_dsl_status(self, active=False):
         """Set the status of the DSL link icon
